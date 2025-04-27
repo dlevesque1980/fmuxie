@@ -6,15 +6,13 @@ pub struct Theme {
     pub background: Color,
     pub highlight: Style,
     pub directory: Color,
-    pub file: Color
 }
 
 const DEFAULT: Theme = Theme {
-    text: SLATE.c200,
+    text: GRAY.c500,
     background: BLUE.c900,
     highlight: Style::new().bg(CYAN.c500).add_modifier(Modifier::BOLD),
     directory: SLATE.c200,
-    file: GRAY.c500
 };
 
 impl Default for Theme {

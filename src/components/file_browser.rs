@@ -6,7 +6,7 @@ use ratatui::{
     text::Line, 
     widgets::{Block, Borders, HighlightSpacing, List, ListItem, ListState}, Frame
 };
-use std::{fs, path::{Path, PathBuf}, os::unix::ffi::OsStrExt};
+use std::{fs, os::unix::ffi::OsStrExt, path::{Path, PathBuf}};
 use crate::{state::AppState, theme::theme::Theme};
 use crossterm::event::KeyCode;
 
@@ -44,6 +44,8 @@ impl Extension for &PathBuf {
 
 impl FocusableWidget for FileBrowser {
     fn render(&mut self, f: &mut Frame, area: Rect, focused: bool, app_state: &AppState) {
+        let _ = app_state;
+        let _ = focused;
 
         let block = Block::new()
         .title(Line::raw("File list").centered())
@@ -55,11 +57,11 @@ impl FocusableWidget for FileBrowser {
         .entries
         .iter()
         .enumerate()
-        .map(|(i, item)| {
+        .map(|(_i, item)| {
             let line = if item.is_dir {
                 Line::styled(item.filename.clone(), self.theme.directory)
             } else {
-                Line::styled(item.filename.clone(), self.theme.file)
+                Line::styled(item.filename.clone(), self.theme.text)
             };
             ListItem::new(line)
         })
@@ -74,8 +76,8 @@ impl FocusableWidget for FileBrowser {
         f.render_stateful_widget(list, area, &mut self.state);
     }
 
-    fn handle_event(&mut self, event: &AppEvent, focused: bool, app_state: &mut AppState) {
-        if !focused { return; }
+    fn handle_event(&mut self, event: &AppEvent, app_state: &mut AppState) {
+        if !self.has_focus() { return; }
 
         if let AppEvent::Input(key) = event {
             match key.code {
@@ -85,7 +87,13 @@ impl FocusableWidget for FileBrowser {
                 KeyCode::Left => self.go_back(),
                 _ => {}
             }
-            app_state.selected_file = self.state.selected().map(|i| self.entries[i].filename.clone());
+            app_state.selected_file = self.state.selected().map(|i| {
+                format!(
+                    "{}/{}",
+                    self.current_dir.to_str().unwrap_or_default(),
+                    self.entries[i].filename.clone()
+                )
+            });
         }
     }
 
@@ -156,6 +164,7 @@ impl FileBrowser {
             if entry.is_dir {
                 new_path.push(entry.filename.clone() + "/");
                 if new_path.is_dir() {
+                    new_path = new_path.canonicalize().unwrap_or(new_path);
                     self.current_dir = new_path;
                     self.entries = Self::read_dir(&self.current_dir);
                     self.state = ListState::default();

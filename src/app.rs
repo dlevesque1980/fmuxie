@@ -9,6 +9,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 use crate::components::component_base::FocusableWidget;
 use crate::components::file_browser::FileBrowser;
+use crate::components::video_info::VideoInfo; // Assuming VideoInfo is in this module
 use crate::events::events::AppEvent;
 use crate::state::AppState;
 use crate::focus_manager::FocusManager;
@@ -16,6 +17,7 @@ use crate::focus_manager::FocusManager;
 const APP_BACKGROUND: Color = BLUE.c900;
 pub struct App {
     file_browser: FileBrowser,
+    video_info: VideoInfo,
     main_layout: Layout,
     state: AppState,
     focus: FocusManager,
@@ -32,7 +34,7 @@ impl App {
             Constraint::Percentage(50),
         ]);
     
-        let mut state = AppState {
+        let state = AppState {
             selected_file: None,
         };
 
@@ -41,7 +43,11 @@ impl App {
             std::process::exit(1);
         }));
         file_browser.set_focus(true);
-        App { file_browser, main_layout, state, focus: FocusManager::new(3) }
+
+        let mut video_info = VideoInfo::new();
+        video_info.set_focus(false);
+
+        App { file_browser, video_info, main_layout, state, focus: FocusManager::new(3) }
     }
 
     pub fn handle_event(&mut self, event: &AppEvent) {
@@ -62,8 +68,14 @@ impl App {
 
         // Delegate input to the focused widget
         match self.focus.current() {
-            0 => self.file_browser.handle_event(event, true, &mut self.state),
-            //1 => self.preview.handle_event(event, true, &mut self.state),
+            0 => {
+                self.file_browser.set_focus(true);
+                self.file_browser.handle_event(event, &mut self.state)
+            },
+            1 => {
+                self.video_info.set_focus(true);
+                self.video_info.handle_event(event, &mut self.state)
+            },
             _ => {}
         }
     }
@@ -86,10 +98,7 @@ impl App {
                 .block(Block::new().borders(Borders::ALL).style(ratatui::style::Style::default().bg(APP_BACKGROUND))),
                 
             chunks[1]);
-        f.render_widget(
-            Paragraph::new("inner 1")
-            .block(Block::new().borders(Borders::ALL).style(ratatui::style::Style::default().bg(APP_BACKGROUND))),
-            inner_layout[1]);            
+        self.video_info.render(f, inner_layout[1], false, &self.state);       
         Ok(())
     }
 }
